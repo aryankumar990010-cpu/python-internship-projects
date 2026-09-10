@@ -1,0 +1,169 @@
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import seaborn as sns
+
+from sklearn.cluster import KMeans
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import (
+    accuracy_score,
+    classification_report,
+    confusion_matrix,
+    f1_score,
+    precision_score,
+    recall_score,
+    roc_auc_score,
+)
+from sklearn.model_selection import cross_val_score, train_test_split
+from sklearn.preprocessing import LabelEncoder, StandardScaler
+
+# Set random seed for reproducibility
+np.random.seed(42)
+
+# ==========================================
+# 1. DATA ACQUISITION & SYNTHESIS
+# ==========================================
+# Simulating a realistic Telecom Customer Churn & Behavior Dataset
+n_samples = 1000
+
+data = {
+    "CustomerID": [f"CUST-{i:04d}" for i in range(1, n_samples + 1)],
+    "Tenure_Months": np.random.randint(1, 72, size=n_samples),
+    "Monthly_Charges": np.round(
+        np.random.uniform(20.0, 120.0, size=n_samples), 2
+    ),
+    "Total_Charges": None,
+    "Contract_Type": np.random.choice(
+        ["Month-to-month", "One year", "Two year"],
+        size=n_samples,
+        p=[0.5, 0.3, 0.2],
+    ),
+    "Tech_Support": np.random.choice(["Yes", "No"], size=n_samples, p=[0.4, 0.6]),
+    "Customer_Service_Calls": np.random.poisson(lam=2, size=n_samples),
+}
+
+df = pd.DataFrame(data)
+# Calculate Total Charges with synthetic noise
+df["Total_Charges"] = np.round(
+    df["Tenure_Months"] * df["Monthly_Charges"]
+    + np.random.normal(0, 50, size=n_samples),
+    2,
+)
+df.loc[df["Total_Charges"] < 0, "Total_Charges"] = df["Monthly_Charges"]
+
+# Introduce Synthetic Target Label (Churn) based on realistic business rules
+churn_prob = (
+    0.35 * (df["Contract_Type"] == "Month-to-month").astype(int)
+    + 0.25 * (df["Customer_Service_Calls"] > 3).astype(int)
+    + 0.20 * (df["Monthly_Charges"] > 80).astype(int)
+    - 0.30 * (df["Tenure_Months"] > 36).astype(int)
+)
+churn_prob = (churn_prob - churn_prob.min()) / (
+    churn_prob.max() - churn_prob.min()
+)
+df["Churn"] = (churn_prob > 0.55).astype(int)
+
+print("--- Dataset Head ---")
+print(df.head())
+print("\nDataset Shape:", df.shape)
+
+# ==========================================
+# 2. DATA CLEANING & PREPROCESSING
+# ==========================================
+# Check for null values
+print("\nMissing Values:\n", df.isnull().sum())
+
+# Feature Encoding
+le = LabelEncoder()
+df["Contract_Type_Code"] = le.fit_transform(df["Contract_Type"])
+df["Tech_Support_Code"] = le.fit_transform(df["Tech_Support"])
+
+# Feature Selection
+feature_cols = [
+    "Tenure_Months",
+    "Monthly_Charges",
+    "Total_Charges",
+    "Customer_Service_Calls",
+    "Contract_Type_Code",
+    "Tech_Support_Code",
+]
+
+X = df[feature_cols]
+y = df["Churn"]
+
+# Train-Test Split (80% Train, 20% Test)
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42, stratify=y
+)
+
+# Feature Scaling
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+
+# ==========================================
+# 3. UNSUPERVISED LEARNING (K-MEANS CLUSTERING)
+# ==========================================
+kmeans = KMeans(n_clusters=3, random_state=42, n_init=10)
+df["Cluster"] = kmeans.fit_predict(scaler.fit_transform(X))
+
+print("\n--- Customer Segments Summary (Clusters) ---")
+print(
+    df.groupby("Cluster")[["Tenure_Months", "Monthly_Charges", "Churn"]].mean()
+)
+
+# ==========================================
+# 4. SUPERVISED LEARNING (PREDICTIVE MODELING)
+# ==========================================
+# Model 1: Logistic Regression
+lr = LogisticRegression(random_state=42)
+lr.fit(X_train_scaled, y_train)
+
+# Model 2: Random Forest Classifier
+rf = RandomForestClassifier(n_estimators=100, random_state=42)
+rf.fit(X_train, y_train)
+
+# 5-Fold Cross Validation
+cv_scores = cross_val_score(rf, X_train, y_train, cv=5)
+print(f"\nRandom Forest 5-Fold CV Accuracy: {cv_scores.mean() * 100:.2f}%")
+
+# ==========================================
+# 5. MODEL EVALUATION
+# ==========================================
+y_pred = rf.predict(X_test)
+
+print("\n--- SUPERVISED MODEL PERFORMANCE (Random Forest) ---")
+print(f"Accuracy:  {accuracy_score(y_test, y_pred):.4f}")
+print(f"Precision: {precision_score(y_test, y_pred):.4f}")
+print(f"Recall:    {recall_score(y_test, y_pred):.4f}")
+print(f"F1-Score:  {f1_score(y_test, y_pred):.4f}")
+print(f"ROC-AUC:   {roc_auc_score(y_test, y_pred):.4f}")
+
+# ==========================================
+# 6. VISUALIZATIONS
+# ==========================================
+fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+
+# Plot 1: Confusion Matrix
+sns.heatmap(
+    confusion_matrix(y_test, y_pred),
+    annot=True,
+    fmt="d",
+    cmap="Blues",
+    ax=axes[0],
+)
+axes[0].set_title("Confusion Matrix - Churn Prediction")
+axes[0].set_xlabel("Predicted")
+axes[0].set_ylabel("Actual")
+
+# Plot 2: Feature Importance
+importances = pd.Series(rf.feature_importances_, index=feature_cols).sort_values(
+    ascending=True
+)
+importances.plot(kind="barh", ax=axes[1], color="teal")
+axes[1].set_title("Feature Importances in Churn Prediction")
+
+plt.tight_layout()
+plt.savefig("capstone_evaluation.png")
+plt.show()
