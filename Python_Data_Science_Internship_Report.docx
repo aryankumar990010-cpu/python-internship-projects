@@ -1,0 +1,36 @@
+"""
+Week 3 Task: Unsupervised Learning and Clustering Analysis
+-----------------------------------------------------------------
+Objective:
+    Apply clustering (unsupervised learning) to a publicly available
+    dataset in order to segment it into meaningful groups, and
+    analyze the characteristics of each resulting cluster.
+
+Dataset:
+    Titanic passenger dataset (same public dataset used in the
+    Week 1 and Week 2 tasks).
+    Source: https://raw.githubusercontent.com/datasciencedojo/datasets/master/titanic.csv
+
+Algorithm:
+    K-Means clustering (scikit-learn), with the number of clusters
+    chosen using the elbow method on inertia.
+"""
+
+import os
+import numpy as np
+import pandas as pd
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+from sklearn.preprocessing import StandardScaler
+from sklearn.cluster import KMeans
+from sklearn.decomposition import PCA
+from sklearn.metrics import silhouette_score
+
+sns.set_style("whitegrid")
+pd.set_option("display.max_columns", None)
+
+DATA_URL = "https://raw.githubusercontent.com/datasciencedojo/datasets/master/titanic.csv"
+LOCAL_FALLBACK = "titanic_sample_offline.csv"
