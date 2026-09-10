@@ -1,0 +1,106 @@
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import seaborn as sns
+
+from sklearn.datasets import load_breast_cancer
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import (
+    accuracy_score,
+    classification_report,
+    confusion_matrix,
+    f1_score,
+    precision_score,
+    recall_score,
+    roc_auc_score,
+)
+from sklearn.model_selection import cross_val_score, train_test_split
+from sklearn.preprocessing import StandardScaler
+
+# ==========================================
+# 1. DATASET LOADING & EXPLORATION
+# ==========================================
+data = load_breast_cancer()
+X = pd.DataFrame(data.data, columns=data.feature_names)
+y = pd.Series(data.target, name="target")
+
+print("Dataset Shape:", X.shape)
+print("Target Classes:", data.target_names)
+
+# ==========================================
+# 2. DATA PREPROCESSING & FEATURE ENGINEERING
+# ==========================================
+# Train-Test Split (80% Train, 20% Test)
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42, stratify=y
+)
+
+# Feature Scaling
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+
+# ==========================================
+# 3. MODEL TRAINING & CROSS VALIDATION
+# ==========================================
+# Model 1: Logistic Regression
+lr_model = LogisticRegression(random_state=42)
+lr_model.fit(X_train_scaled, y_train)
+
+# Model 2: Random Forest Classifier
+rf_model = RandomForestClassifier(n_estimators=100, random_state=42)
+rf_model.fit(X_train, y_train)
+
+# 5-Fold Cross Validation
+lr_cv_scores = cross_val_score(lr_model, X_train_scaled, y_train, cv=5)
+rf_cv_scores = cross_val_score(rf_model, X_train, y_train, cv=5)
+
+print(f"Logistic Regression 5-Fold CV Accuracy: {lr_cv_scores.mean():.4f}")
+print(f"Random Forest 5-Fold CV Accuracy: {rf_cv_scores.mean():.4f}")
+
+# ==========================================
+# 4. EVALUATION & PERFORMANCE METRICS
+# ==========================================
+y_pred_rf = rf_model.predict(X_test)
+
+print("\n--- RANDOM FOREST PERFORMANCE METRICS ---")
+print(f"Accuracy:  {accuracy_score(y_test, y_pred_rf):.4f}")
+print(f"Precision: {precision_score(y_test, y_pred_rf):.4f}")
+print(f"Recall:    {recall_score(y_test, y_pred_rf):.4f}")
+print(f"F1-Score:  {f1_score(y_test, y_pred_rf):.4f}")
+print(f"ROC-AUC:   {roc_auc_score(y_test, y_pred_rf):.4f}")
+
+print("\nClassification Report:\n", classification_report(y_test, y_pred_rf))
+
+# ==========================================
+# 5. VISUALIZATIONS
+# ==========================================
+# Confusion Matrix
+plt.figure(figsize=(5, 4))
+sns.heatmap(
+    confusion_matrix(y_test, y_pred_rf),
+    annot=True,
+    fmt="d",
+    cmap="Blues",
+    xticklabels=data.target_names,
+    yticklabels=data.target_names,
+)
+plt.title("Confusion Matrix - Random Forest")
+plt.xlabel("Predicted Label")
+plt.ylabel("True Label")
+plt.tight_layout()
+plt.savefig("confusion_matrix.png")
+plt.show()
+
+# Top 10 Feature Importances
+importances = pd.Series(rf_model.feature_importances_, index=X.columns)
+top_features = importances.nlargest(10)
+
+plt.figure(figsize=(8, 4))
+top_features.plot(kind="barh", color="teal")
+plt.title("Top 10 Important Features (Random Forest)")
+plt.xlabel("Relative Importance Score")
+plt.tight_layout()
+plt.savefig("feature_importance.png")
+plt.show()
