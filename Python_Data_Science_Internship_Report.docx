@@ -1,0 +1,83 @@
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import seaborn as sns
+
+# ==========================================
+# 1. LOAD PUBLIC DATASET (Titanic Dataset)
+# ==========================================
+url = "https://raw.githubusercontent.com/datasciencedojo/datasets/master/titanic.csv"
+df = pd.read_csv(url)
+
+# ==========================================
+# 2. INITIAL ANALYSIS & BASIC STATISTICS
+# ==========================================
+print("=== FIRST 5 ROWS ===")
+print(df.head())
+
+print("\n=== DATASET SUMMARY & DATA TYPES ===")
+print(df.info())
+
+print("\n=== MISSING VALUES COUNT ===")
+print(df.isnull().sum())
+
+print("\n=== STATISTICAL SUMMARY ===")
+print(df.describe())
+
+# ==========================================
+# 3. DATA CLEANING & TRANSFORMATIONS
+# ==========================================
+# Handling missing values
+df["Age"].fillna(df["Age"].median(), inplace=True)
+df["Embarked"].fillna(df["Embarked"].mode()[0], inplace=True)
+df.drop(columns=["Cabin"], inplace=True)  # Dropping due to >70% missing values
+
+# Feature Engineering: Creating a new feature 'FamilySize'
+df["FamilySize"] = df["SibSp"] + df["Parch"] + 1
+
+print("\n=== DATA CLEANING COMPLETED ===")
+print(f"Remaining Missing Values: {df.isnull().sum().sum()}")
+
+# ==========================================
+# 4. DATA VISUALIZATIONS & ANNOTATIONS
+# ==========================================
+sns.set_theme(style="whitegrid")
+
+# Chart 1: Survival Count Distribution
+plt.figure(figsize=(6, 4))
+sns.countplot(x="Survived", data=df, palette="Set2")
+plt.title("Passenger Survival Count (0 = No, 1 = Yes)")
+plt.xlabel("Survival Status")
+plt.ylabel("Number of Passengers")
+plt.tight_layout()
+plt.savefig("survival_count.png")
+plt.show()
+
+# Chart 2: Survival Rate by Gender
+plt.figure(figsize=(6, 4))
+sns.barplot(x="Sex", y="Survived", data=df, ci=None, palette="Blues_d")
+plt.title("Survival Rate by Gender")
+plt.xlabel("Gender")
+plt.ylabel("Survival Rate (0 to 1)")
+plt.tight_layout()
+plt.savefig("survival_by_gender.png")
+plt.show()
+
+# Chart 3: Age Distribution of Passengers
+plt.figure(figsize=(7, 4))
+sns.histplot(df["Age"], kde=True, color="teal", bins=30)
+plt.title("Age Distribution of Titanic Passengers")
+plt.xlabel("Age (Years)")
+plt.ylabel("Frequency")
+plt.tight_layout()
+plt.savefig("age_distribution.png")
+plt.show()
+
+# Chart 4: Correlation Heatmap
+plt.figure(figsize=(8, 5))
+numeric_df = df.select_dtypes(include=[np.number])
+sns.heatmap(numeric_df.corr(), annot=True, cmap="coolwarm", fmt=".2f")
+plt.title("Correlation Heatmap of Numeric Features")
+plt.tight_layout()
+plt.savefig("correlation_heatmap.png")
+plt.show()
