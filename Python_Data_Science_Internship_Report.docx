@@ -1,0 +1,29 @@
+"""
+Week 1 Task: Data Acquisition, Cleaning, and Preprocessing
+------------------------------------------------------------
+Objective:
+    Acquire a publicly available dataset, explore it, clean it
+    (handle missing values, duplicates, outliers), and preprocess
+    it so it is ready for further analysis.
+
+Dataset:
+    Titanic passenger dataset (public dataset, commonly used for
+    data cleaning practice). Source:
+    https://raw.githubusercontent.com/datasciencedojo/datasets/master/titanic.csv
+
+    If no internet connection is available, a small local sample
+    with the same structure (titanic_sample_offline.csv) is used
+    instead, so the script can still be run and verified offline.
+"""
+
+import pandas as pd
+import numpy as np
+
+pd.set_option("display.max_columns", None)
+pd.set_option("display.width", 120)
+
+DATA_URL = "https://raw.githubusercontent.com/datasciencedojo/datasets/master/titanic.csv"
+LOCAL_FALLBACK = "titanic_sample_offline.csv"
+
+
+# ---------------------------------------------------------------
